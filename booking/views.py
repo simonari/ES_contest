@@ -18,6 +18,8 @@ class GetRoomInfoView(APIView):
         beds_to = p.get('beds_to')
         available_from_from = p.get('available_from')
         available_from_to = p.get('available_to')
+        booked = True if "booked" in p.keys() else False
+        vacant = True if "vacant" in p.keys() else False
 
         query = Q()
 
@@ -33,6 +35,12 @@ class GetRoomInfoView(APIView):
             query &= Q(available_from__gte=available_from_from)
         if available_from_to:
             query &= Q(available_from__lte=available_from_to)
+        if booked ^ vacant:
+            if booked:
+                query &= Q(booked=True)
+            else:
+                query &= Q(booked=False)
+
 
         queryset = Room.objects.filter(query)
         serialized = RoomSerializer(queryset, many=True)

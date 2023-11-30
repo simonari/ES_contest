@@ -1,0 +1,24 @@
+version: "3.5"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: "${DB_CONTAINER}"
+
+    volumes:
+      - "${DB_VOLUME}:/var/lib/postgresql/data/"
+
+    ports:
+      - "5433:5432"
+
+    environment:
+      POSTGRES_USER: "${DB_USER}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+      POSTGRES_DB: "${DB_NAME}"
+
+    restart: always
+
+networks:
+  default:
+    driver: bridge
+    name: "${DOCKER_NETWORK}"

@@ -1,8 +1,8 @@
-from django.shortcuts import render
 from django.db.models import Q
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.views import APIView
+from rest_framework.status import HTTP_400_BAD_REQUEST
 
 from .models import Room
 from .serializers import RoomSerializer
@@ -41,7 +41,24 @@ class GetRoomInfoView(APIView):
             else:
                 query &= Q(booked=False)
 
-
         queryset = Room.objects.filter(query)
-        serialized = RoomSerializer(queryset, many=True)
-        return Response(serialized.data)
+        serializer = RoomSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+class BookRoomView(APIView):
+    def get(self, request: Request, pk: int):
+        queryset = Room.objects.get(pk=pk)
+        serializer = RoomSerializer(queryset)
+        return Response(serializer.data)
+
+    def put(self, request: Request, pk: int):
+        room = Room.objects.get(pk=pk)
+
+        if room.booked:
+            return Response("This room is booked already", status=HTTP_400_BAD_REQUEST)
+
+        room.booked = True
+        room.save()
+
+        return Response(200)

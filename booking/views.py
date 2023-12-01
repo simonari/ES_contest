@@ -1,11 +1,17 @@
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+
 from django.db.models import Q
+from rest_framework import generics, status
+from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.views import APIView
-from rest_framework.status import HTTP_400_BAD_REQUEST
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 
 from .models import Room
-from .serializers import RoomSerializer
+from .serializers import RoomSerializer, UserSerializer, RegisterSerializer
 
 
 class GetRoomInfoView(APIView):
@@ -47,18 +53,82 @@ class GetRoomInfoView(APIView):
 
 
 class BookRoomView(APIView):
-    def get(self, request: Request, pk: int):
-        queryset = Room.objects.get(pk=pk)
-        serializer = RoomSerializer(queryset)
-        return Response(serializer.data)
+    serializer_class = RoomSerializer
+    authentication_classes = [TokenAuthentication, ]
 
-    def put(self, request: Request, pk: int):
-        room = Room.objects.get(pk=pk)
+    def get_permissions(self):
+        permission_classes = [AllowAny(), ]
 
-        if room.booked:
-            return Response("This room is booked already", status=HTTP_400_BAD_REQUEST)
+        if self.request.method == "PUT":
+            permission_classes = [IsAuthenticated(), ]
+
+        return permission_classes
+
+    def get_queryset(self):
+        return Room.objects.get(pk=self.kwargs['pk'])
+
+    def put(self, request, *args, **kwargs):
+        room = self.get_queryset()
+
+        if room.booked is True:
+            return Response("Room is already booked", status.HTTP_400_BAD_REQUEST)
 
         room.booked = True
         room.save()
+        return Response("Room is booked", status.HTTP_200_OK)
 
-        return Response(200)
+    def get(self, request, *args, **kwargs):
+        room = self.get_queryset()
+        serializer = RoomSerializer(room)
+        return Response(serializer.data)
+
+
+class UserDetailView(APIView):
+    authentication_classes = [TokenAuthentication, ]
+    permission_classes = [IsAuthenticated, ]
+
+    def get(self, request):
+        user = Token.objects.get(key=request.user.auth_token).user
+
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+
+
+class UserRegisterView(generics.CreateAPIView):
+    permission_classes = (AllowAny,)
+    serializer_class = RegisterSerializer
+
+
+class UserLogInView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        user = None
+
+        try:
+            user = User.objects.get(username=username)
+        except:
+            pass
+
+        if user is not None:
+            user = authenticate(username=username, password=password)
+
+        if user:
+            token, _ = Token.objects.get_or_create(user=user)
+            return Response({'token': token.key}, status=status.HTTP_200_OK)
+
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class UserLogOutView(APIView):
+    permission_classes = [IsAuthenticated, ]
+
+    def post(self, request):
+        try:
+            request.user.auth_token.delete()
+            return Response({'message': 'Successfully logged out'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status.HTTP_500_INTERNAL_SERVER_ERROR)

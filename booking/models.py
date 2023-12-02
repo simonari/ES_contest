@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class Room(models.Model):
@@ -9,4 +10,4 @@ class Room(models.Model):
     beds = models.PositiveIntegerField()
     booked = models.BooleanField(default=False)
     available_from = models.DateTimeField()
-
+    booked_by = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)

@@ -70,12 +70,20 @@ class BookRoomView(APIView):
     def put(self, request, *args, **kwargs):
         room = self.get_queryset()
 
-        if room.booked is True:
-            return Response("Room is already booked", status.HTTP_400_BAD_REQUEST)
-
-        room.booked = True
-        room.save()
-        return Response("Room is booked", status.HTTP_200_OK)
+        # TODO: there might be cleaner way to perform this operations
+        if room.booked:
+            if room.booked_by == request.user:
+                room.booked = False
+                room.booked_by = None
+                room.save()
+                return Response("Booking successfully reverted!", status=status.HTTP_200_OK)
+            else:
+                return Response("You can't revert booking of this room", status=status.HTTP_401_UNAUTHORIZED)
+        else:
+            room.booked = True
+            room.booked_by = request.user
+            room.save()
+            return Response("Room successfully booked", status=status.HTTP_200_OK)
 
     def get(self, request, *args, **kwargs):
         room = self.get_queryset()

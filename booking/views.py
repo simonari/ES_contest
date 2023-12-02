@@ -91,6 +91,19 @@ class BookRoomView(APIView):
         return Response(serializer.data)
 
 
+class BookedRoomListView(APIView):
+    serializer_class = RoomSerializer
+    authentication_classes = [TokenAuthentication, ]
+    permission_classes = [IsAuthenticated, ]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+
+        rooms = Room.objects.filter(booked_by=user)
+        serializer = RoomSerializer(rooms, many=True)
+        return Response(serializer.data)
+
+
 class UserDetailView(APIView):
     authentication_classes = [TokenAuthentication, ]
     permission_classes = [IsAuthenticated, ]

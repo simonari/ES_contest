@@ -7,7 +7,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from rest_framework.authentication import TokenAuthentication
 
 from .models import Room
@@ -57,11 +57,15 @@ class GetRoomInfoView(generics.ListAPIView):
         return Room.objects.filter(query)
 
 
-class BookRoomView(APIView):
+class BookRoomView(generics.RetrieveUpdateAPIView):
     serializer_class = RoomSerializer
     authentication_classes = [TokenAuthentication, ]
 
-    def get_permissions(self):
+    def get_permissions(self) -> list[BasePermission]:
+        """Method to assign permissions to methods
+        GET allowed to everyone
+        PUT allowed only to authenticated users
+        """
         permission_classes = [AllowAny(), ]
 
         if self.request.method == "PUT":
@@ -69,32 +73,32 @@ class BookRoomView(APIView):
 
         return permission_classes
 
-    def get_queryset(self):
+    def get_queryset(self) -> Room:
         return Room.objects.get(pk=self.kwargs['pk'])
 
-    def put(self, request, *args, **kwargs):
-        """Method to book a room or revert booking of room"""
-        room = self.get_queryset()
+    def get_object(self) -> Room:
+        return self.get_queryset()
 
-        # TODO: there might be cleaner way to perform this operations
-        if room.booked:
-            if room.booked_by == request.user:
-                room.booked = False
-                room.booked_by = None
-                room.save()
-                return Response("Booking successfully reverted!", status=status.HTTP_200_OK)
-            else:
-                return Response("You can't revert booking of this room", status=status.HTTP_401_UNAUTHORIZED)
-        else:
+    def update(self, request: Request, *args, **kwargs):
+        room: Room = self.get_object()
+
+        # If room not booked - book it by user
+        if not room.booked:
             room.booked = True
             room.booked_by = request.user
             room.save()
             return Response("Room successfully booked", status=status.HTTP_200_OK)
 
-    def get(self, request, *args, **kwargs):
-        room = self.get_queryset()
-        serializer = RoomSerializer(room)
-        return Response(serializer.data)
+        # If room is booked, we check that requesting user and user that has booked a room match
+        # If it's not - server denies request for cancel booking
+        if room.booked_by != request.user:
+            return Response("You can't revert booking of this room", status=status.HTTP_401_UNAUTHORIZED)
+
+        # Otherwise - booking will be reverted
+        room.booked = False
+        room.booked_by = None
+        room.save()
+        return Response("Booking successfully reverted!", status=status.HTTP_200_OK)
 
 
 class BookedRoomListView(generics.ListAPIView):

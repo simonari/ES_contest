@@ -14,18 +14,21 @@ from .models import Room
 from .serializers import RoomSerializer, UserSerializer, RegisterSerializer
 
 
-class GetRoomInfoView(APIView):
-    def get(self, request: Request):
-        p = request.query_params
+class GetRoomInfoView(generics.ListAPIView):
+    serializer_class = RoomSerializer
+    permission_classes = [AllowAny, ]
 
-        price_from = p.get('price_from')
-        price_to = p.get('price_to')
-        beds_from = p.get('beds_from')
-        beds_to = p.get('beds_to')
-        available_from_from = p.get('available_from')
-        available_from_to = p.get('available_to')
-        booked = True if "booked" in p.keys() else False
-        vacant = True if "vacant" in p.keys() else False
+    def _make_query(self) -> Q:
+        params = self.request.query_params
+
+        price_from = params.get('price_from')
+        price_to = params.get('price_to')
+        beds_from = params.get('beds_from')
+        beds_to = params.get('beds_to')
+        available_from_from = params.get('available_from')
+        available_from_to = params.get('available_to')
+        booked = True if "booked" in params.keys() else False
+        vacant = True if "vacant" in params.keys() else False
 
         query = Q()
 
@@ -47,9 +50,11 @@ class GetRoomInfoView(APIView):
             else:
                 query &= Q(booked=False)
 
-        queryset = Room.objects.filter(query)
-        serializer = RoomSerializer(queryset, many=True)
-        return Response(serializer.data)
+        return query
+
+    def get_queryset(self) -> QuerySet[Room]:
+        query: Q = self._make_query()
+        return Room.objects.filter(query)
 
 
 class BookRoomView(APIView):

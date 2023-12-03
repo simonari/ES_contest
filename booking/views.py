@@ -103,15 +103,16 @@ class BookedRoomListView(generics.ListAPIView):
         return rooms
 
 
-class UserDetailView(APIView):
+class UserDetailView(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
     authentication_classes = [TokenAuthentication, ]
     permission_classes = [IsAuthenticated, ]
 
-    def get(self, request):
-        user = Token.objects.get(key=request.user.auth_token).user
+    def get_queryset(self) -> User:
+        return Token.objects.get(key=self.request.user.auth_token).user
 
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
+    def get_object(self) -> User:
+        return self.get_queryset()
 
 
 class UserRegisterView(generics.CreateAPIView):

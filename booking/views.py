@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.db.models import Q, QuerySet
 
-from django.db.models import Q
 from rest_framework import generics, status
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
@@ -68,6 +68,7 @@ class BookRoomView(APIView):
         return Room.objects.get(pk=self.kwargs['pk'])
 
     def put(self, request, *args, **kwargs):
+        """Method to book a room or revert booking of room"""
         room = self.get_queryset()
 
         # TODO: there might be cleaner way to perform this operations
@@ -91,17 +92,15 @@ class BookRoomView(APIView):
         return Response(serializer.data)
 
 
-class BookedRoomListView(APIView):
+class BookedRoomListView(generics.ListAPIView):
     serializer_class = RoomSerializer
     authentication_classes = [TokenAuthentication, ]
     permission_classes = [IsAuthenticated, ]
 
-    def get(self, request, *args, **kwargs):
-        user = request.user
-
-        rooms = Room.objects.filter(booked_by=user)
-        serializer = RoomSerializer(rooms, many=True)
-        return Response(serializer.data)
+    def get_queryset(self) -> QuerySet[Room]:
+        user: User = self.request.user
+        rooms: QuerySet[Room] = Room.objects.filter(booked_by=user)
+        return rooms
 
 
 class UserDetailView(APIView):

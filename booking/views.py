@@ -1,31 +1,34 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.db.models import Q, QuerySet
 
-from django.db.models import Q
 from rest_framework import generics, status
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from rest_framework.authentication import TokenAuthentication
 
 from .models import Room
 from .serializers import RoomSerializer, UserSerializer, RegisterSerializer
 
 
-class GetRoomInfoView(APIView):
-    def get(self, request: Request):
-        p = request.query_params
+class GetRoomInfoView(generics.ListAPIView):
+    serializer_class = RoomSerializer
+    permission_classes = [AllowAny, ]
 
-        price_from = p.get('price_from')
-        price_to = p.get('price_to')
-        beds_from = p.get('beds_from')
-        beds_to = p.get('beds_to')
-        available_from_from = p.get('available_from')
-        available_from_to = p.get('available_to')
-        booked = True if "booked" in p.keys() else False
-        vacant = True if "vacant" in p.keys() else False
+    def _make_query(self) -> Q:
+        params = self.request.query_params
+
+        price_from = params.get('price_from')
+        price_to = params.get('price_to')
+        beds_from = params.get('beds_from')
+        beds_to = params.get('beds_to')
+        available_from_from = params.get('available_from')
+        available_from_to = params.get('available_to')
+        booked = True if "booked" in params.keys() else False
+        vacant = True if "vacant" in params.keys() else False
 
         query = Q()
 
@@ -47,16 +50,22 @@ class GetRoomInfoView(APIView):
             else:
                 query &= Q(booked=False)
 
-        queryset = Room.objects.filter(query)
-        serializer = RoomSerializer(queryset, many=True)
-        return Response(serializer.data)
+        return query
+
+    def get_queryset(self) -> QuerySet[Room]:
+        query: Q = self._make_query()
+        return Room.objects.filter(query)
 
 
-class BookRoomView(APIView):
+class BookRoomView(generics.RetrieveUpdateAPIView):
     serializer_class = RoomSerializer
     authentication_classes = [TokenAuthentication, ]
 
-    def get_permissions(self):
+    def get_permissions(self) -> list[BasePermission]:
+        """Method to assign permissions to methods
+        GET allowed to everyone
+        PUT allowed only to authenticated users
+        """
         permission_classes = [AllowAny(), ]
 
         if self.request.method == "PUT":
@@ -64,55 +73,55 @@ class BookRoomView(APIView):
 
         return permission_classes
 
-    def get_queryset(self):
+    def get_queryset(self) -> Room:
         return Room.objects.get(pk=self.kwargs['pk'])
 
-    def put(self, request, *args, **kwargs):
-        room = self.get_queryset()
+    def get_object(self) -> Room:
+        return self.get_queryset()
 
-        # TODO: there might be cleaner way to perform this operations
-        if room.booked:
-            if room.booked_by == request.user:
-                room.booked = False
-                room.booked_by = None
-                room.save()
-                return Response("Booking successfully reverted!", status=status.HTTP_200_OK)
-            else:
-                return Response("You can't revert booking of this room", status=status.HTTP_401_UNAUTHORIZED)
-        else:
+    def update(self, request: Request, *args, **kwargs):
+        room: Room = self.get_object()
+
+        # If room not booked - book it by user
+        if not room.booked:
             room.booked = True
             room.booked_by = request.user
             room.save()
             return Response("Room successfully booked", status=status.HTTP_200_OK)
 
-    def get(self, request, *args, **kwargs):
-        room = self.get_queryset()
-        serializer = RoomSerializer(room)
-        return Response(serializer.data)
+        # If room is booked, we check that requesting user and user that has booked a room match
+        # If it's not - server denies request for cancel booking
+        if room.booked_by != request.user:
+            return Response("You can't revert booking of this room", status=status.HTTP_401_UNAUTHORIZED)
+
+        # Otherwise - booking will be reverted
+        room.booked = False
+        room.booked_by = None
+        room.save()
+        return Response("Booking successfully reverted!", status=status.HTTP_200_OK)
 
 
-class BookedRoomListView(APIView):
+class BookedRoomListView(generics.ListAPIView):
     serializer_class = RoomSerializer
     authentication_classes = [TokenAuthentication, ]
     permission_classes = [IsAuthenticated, ]
 
-    def get(self, request, *args, **kwargs):
-        user = request.user
-
-        rooms = Room.objects.filter(booked_by=user)
-        serializer = RoomSerializer(rooms, many=True)
-        return Response(serializer.data)
+    def get_queryset(self) -> QuerySet[Room]:
+        user: User = self.request.user
+        rooms: QuerySet[Room] = Room.objects.filter(booked_by=user)
+        return rooms
 
 
-class UserDetailView(APIView):
+class UserDetailView(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
     authentication_classes = [TokenAuthentication, ]
     permission_classes = [IsAuthenticated, ]
 
-    def get(self, request):
-        user = Token.objects.get(key=request.user.auth_token).user
+    def get_queryset(self) -> User:
+        return Token.objects.get(key=self.request.user.auth_token).user
 
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
+    def get_object(self) -> User:
+        return self.get_queryset()
 
 
 class UserRegisterView(generics.CreateAPIView):

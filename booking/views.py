@@ -14,7 +14,7 @@ from .serializers import RoomSerializer, UserSerializer
 
 class GetRoomInfoView(generics.ListAPIView):
     serializer_class = RoomSerializer
-    permission_classes = [AllowAny, ]
+    permission_classes = [AllowAny]
 
     def _make_query(self) -> Q:
         params = self.request.query_params
@@ -57,7 +57,7 @@ class GetRoomInfoView(generics.ListAPIView):
 
 class BookRoomView(viewsets.ModelViewSet):
     serializer_class = RoomSerializer
-    authentication_classes = [TokenAuthentication, ]
+    authentication_classes = [TokenAuthentication]
 
     def get_permissions(self) -> list[BasePermission]:
         """Method to assign permissions to actions.\n
@@ -101,8 +101,8 @@ class BookRoomView(viewsets.ModelViewSet):
 
 class BookedRoomListView(generics.ListAPIView):
     serializer_class = RoomSerializer
-    authentication_classes = [TokenAuthentication, ]
-    permission_classes = [IsAuthenticated, ]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self) -> QuerySet[Room]:
         user: User = self.request.user
@@ -112,8 +112,8 @@ class BookedRoomListView(generics.ListAPIView):
 
 class UserDetailView(generics.RetrieveAPIView):
     serializer_class = UserSerializer
-    authentication_classes = [TokenAuthentication, ]
-    permission_classes = [IsAuthenticated, ]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self) -> User:
         return Token.objects.get(key=self.request.user.auth_token).user

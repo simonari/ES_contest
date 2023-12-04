@@ -8,6 +8,6 @@ urlpatterns = [
     path('api/profile/booked/', views.BookedRoomListView.as_view()),
     path('api/profile', views.UserDetailView.as_view()),
     path('api/drf-auth/', include('rest_framework.urls')),
-    re_path(r'^auth/', include('djoser.urls')),
+    path(r'api/auth/', include('djoser.urls')),
     re_path(r'^auth/', include('djoser.urls.authtoken')),
 ]

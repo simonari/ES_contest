@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     # REST
     'rest_framework',
     'rest_framework.authtoken',
+    # Third-Party modules
+    'djoser',
     # APPS
     'booking',
 ]

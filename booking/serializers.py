@@ -12,10 +12,3 @@ class RoomSerializer(serializers.Serializer):
     beds = serializers.IntegerField()
     booked = serializers.BooleanField()
     available_from = serializers.DateTimeField()
-
-
-class UserSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
-    username = serializers.CharField(max_length=32)
-    first_name = serializers.CharField(max_length=32)
-    last_name = serializers.CharField(max_length=32)

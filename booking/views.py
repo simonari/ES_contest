@@ -11,7 +11,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from rest_framework.authentication import TokenAuthentication
 
 from .models import Room
-from .serializers import RoomSerializer, UserSerializer, RegisterSerializer
+from .serializers import RoomSerializer, UserSerializer
 
 
 class GetRoomInfoView(generics.ListAPIView):
@@ -123,42 +123,3 @@ class UserDetailView(generics.RetrieveAPIView):
     def get_object(self) -> User:
         return self.get_queryset()
 
-
-class UserRegisterView(generics.CreateAPIView):
-    permission_classes = (AllowAny,)
-    serializer_class = RegisterSerializer
-
-
-class UserLogInView(APIView):
-    permission_classes = (AllowAny,)
-
-    def post(self, request):
-        username = request.data.get('username')
-        password = request.data.get('password')
-
-        user = None
-
-        try:
-            user = User.objects.get(username=username)
-        except:
-            pass
-
-        if user is not None:
-            user = authenticate(username=username, password=password)
-
-        if user:
-            token, _ = Token.objects.get_or_create(user=user)
-            return Response({'token': token.key}, status=status.HTTP_200_OK)
-
-        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-
-
-class UserLogOutView(APIView):
-    permission_classes = [IsAuthenticated, ]
-
-    def post(self, request):
-        try:
-            request.user.auth_token.delete()
-            return Response({'message': 'Successfully logged out'}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -2,7 +2,6 @@ from django.contrib.auth.models import User
 from django.db.models import Q, QuerySet
 
 from rest_framework import generics, viewsets, status
-from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
@@ -123,15 +122,3 @@ class RoomBookedListView(generics.ListAPIView):
         user: User = self.request.user
         rooms: QuerySet[Room] = Room.objects.filter(booked_by=user)
         return rooms
-
-
-class UserDetailView(generics.RetrieveAPIView):
-    serializer_class = UserSerializer
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self) -> User:
-        return Token.objects.get(key=self.request.user.auth_token).user
-
-    def get_object(self) -> User:
-        return self.get_queryset()

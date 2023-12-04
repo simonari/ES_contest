@@ -9,14 +9,18 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from rest_framework.authentication import TokenAuthentication
 
 from .models import Room
-from .serializers import RoomSerializer, UserSerializer
+from .serializers import RoomSerializer
 
 
 class RoomListView(generics.ListAPIView):
+    """View to get list of rooms.\n
+    Request might be provided with query params to search through that list.
+    """
     serializer_class = RoomSerializer
     permission_classes = [AllowAny]
 
     def _make_query(self) -> Q:
+        """Method to parse query params and make a DB-query"""
         params = self.request.query_params
 
         price_from = params.get('price_from')
@@ -51,11 +55,16 @@ class RoomListView(generics.ListAPIView):
         return query
 
     def get_queryset(self) -> QuerySet[Room]:
+        """Method to get query set containing room instances"""
         query: Q = self._make_query()
         return Room.objects.filter(query)
 
 
 class RoomDetailView(viewsets.ModelViewSet):
+    """A set of view for detailed info about specific room.\n
+    - **retrieve** action responsible for getting single room instance;
+    - **partial_update** action responsible for booking selected room;
+    """
     serializer_class = RoomSerializer
     authentication_classes = [TokenAuthentication]
 
@@ -72,12 +81,16 @@ class RoomDetailView(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
 
     def get_queryset(self) -> Room:
+        """Method to get queryset containing room instance"""
         return Room.objects.get(pk=self.kwargs["pk"])
 
     def get_object(self) -> Room:
+        """Method to get room instance """
         return self.get_queryset()
 
     def partial_update(self, request: Request, *args, **kwargs) -> Response:
+        """Method that handling **PATCH** HTTP method.\n
+        Responsible for booking room by user or reverting booking."""
         room: Room = self.get_object()
 
         # If room not booked - book it by user
@@ -100,11 +113,13 @@ class RoomDetailView(viewsets.ModelViewSet):
 
 
 class RoomBookedListView(generics.ListAPIView):
+    """View to get a list of booked by user rooms."""
     serializer_class = RoomSerializer
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self) -> QuerySet[Room]:
+        """Method to get query set of rooms booked by user"""
         user: User = self.request.user
         rooms: QuerySet[Room] = Room.objects.filter(booked_by=user)
         return rooms

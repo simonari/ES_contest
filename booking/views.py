@@ -10,14 +10,70 @@ from rest_framework.request import Request
 from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from rest_framework.authentication import TokenAuthentication
 
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
+
 from .models import Room
 from .serializers import RoomSerializer
 
 
+@extend_schema(tags=['Booking'])
+@extend_schema_view(
+    get=extend_schema(
+        summary='View to get list of rooms',
+        description='Endpoint to get list of all rooms.\nParameters might be used to filter them.',
+        parameters=[
+            OpenApiParameter(
+                name='price_from',
+                location=OpenApiParameter.QUERY,
+                description='Minimum price of the room',
+                required=False
+            ),
+            OpenApiParameter(
+                name='price_to',
+                location=OpenApiParameter.QUERY,
+                description='Maximum price of the room',
+                required=False
+            ),
+            OpenApiParameter(
+                name='beds_from',
+                location=OpenApiParameter.QUERY,
+                description='Minimum number of beds in room',
+                required=False
+            ),
+            OpenApiParameter(
+                name='beds_to',
+                location=OpenApiParameter.QUERY,
+                description='Maximum number of beds in room',
+                required=False
+            ),
+            OpenApiParameter(
+                name='available_from',
+                location=OpenApiParameter.QUERY,
+                description='Minimum datetime that room available from',
+                required=False
+            ),
+            OpenApiParameter(
+                name='available_to',
+                location=OpenApiParameter.QUERY,
+                description='Maximum datetime that room available from',
+                required=False
+            ),
+            OpenApiParameter(
+                name='booked',
+                location=OpenApiParameter.QUERY,
+                description='Filter to show already booked rooms',
+                required=False,
+            ),
+            OpenApiParameter(
+                name='vacant',
+                location=OpenApiParameter.QUERY,
+                description='Filter to show vacant rooms',
+                required=False,
+            ),
+        ]
+    )
+)
 class RoomListView(generics.ListAPIView):
-    """View to get list of rooms.\n
-    Request might be provided with query params to search through that list.
-    """
     serializer_class = RoomSerializer
     permission_classes = [AllowAny]
 
@@ -62,6 +118,47 @@ class RoomListView(generics.ListAPIView):
         return Room.objects.filter(query)
 
 
+@extend_schema(tags=['Booking'])
+@extend_schema_view(
+    retrieve=extend_schema(
+        summary='Get detailed info of room',
+        description='Get detailed info about room to any user',
+        parameters=[
+            OpenApiParameter(
+                name="id",
+                location=OpenApiParameter.PATH,
+                description="ID of room in database",
+                required=True,
+                type=int
+            )
+        ]
+    ),
+    partial_update=extend_schema(
+        summary='Book room by user',
+        description='Book available room by user or revert booking '
+                    'if requesting user matches user that has booked a room',
+        parameters=[
+            OpenApiParameter(
+                name="id",
+                location=OpenApiParameter.PATH,
+                description="ID of room in database",
+                required=True,
+                type=int
+            ),
+            OpenApiParameter(
+                name="Authorization",
+                location=OpenApiParameter.HEADER,
+                description="Authorization token",
+                required=True,
+                type=str,
+                examples=[
+                    OpenApiExample("Token d8c719cea96554df7b4289f86d7f37c7c5faef20"),
+                    OpenApiExample("Token 36e4ef60d3300e82595749c324d1fffb8db93b7d"),
+                ]
+            ),
+        ]
+    )
+)
 class RoomDetailView(viewsets.ModelViewSet):
     """A set of view for detailed info about specific room.\n
     - **retrieve** action responsible for getting single room instance;
@@ -114,6 +211,25 @@ class RoomDetailView(viewsets.ModelViewSet):
         return Response("Booking successfully reverted!", status=status.HTTP_200_OK)
 
 
+@extend_schema(tags=['Booking'])
+@extend_schema_view(
+    get=extend_schema(
+        summary='Get a list of booked by user rooms',
+        description='Get a list of booked by user rooms',
+        parameters=[
+            OpenApiParameter(
+                name="Authorization",
+                location=OpenApiParameter.HEADER,
+                description="Authorization token",
+                required=True,
+                type=str,
+                examples=[
+                    OpenApiExample("Token d8c719cea96554df7b4289f86d7f37c7c5faef20"),
+                    OpenApiExample("Token 36e4ef60d3300e82595749c324d1fffb8db93b7d"),
+                ]
+            )],
+    )
+)
 class RoomBookedListView(generics.ListAPIView):
     """View to get a list of booked by user rooms."""
     serializer_class = RoomSerializer

@@ -1,5 +1,8 @@
+from typing import Type
+
 from django.contrib.auth.models import User
 from django.db.models import Q, QuerySet
+from django.http import QueryDict
 
 from rest_framework import generics, viewsets, status
 from rest_framework.response import Response
@@ -20,18 +23,18 @@ class RoomListView(generics.ListAPIView):
 
     def _make_query(self) -> Q:
         """Method to parse query params and make a DB-query"""
-        params = self.request.query_params
+        params: Type[QueryDict] = self.request.query_params
 
-        price_from = params.get('price_from')
-        price_to = params.get('price_to')
-        beds_from = params.get('beds_from')
-        beds_to = params.get('beds_to')
-        available_from_from = params.get('available_from')
-        available_from_to = params.get('available_to')
-        booked = True if "booked" in params.keys() else False
-        vacant = True if "vacant" in params.keys() else False
+        price_from: str = params.get(key='price_from')
+        price_to: str = params.get(key='price_to')
+        beds_from: str = params.get(key='beds_from')
+        beds_to: str = params.get(key='beds_to')
+        available_from_from: str = params.get(key='available_from')
+        available_from_to: str = params.get(key='available_to')
+        booked: bool = "booked" in params.keys()
+        vacant: bool = "vacant" in params.keys()
 
-        query = Q()
+        query: Q = Q()
 
         if price_from:
             query &= Q(price__gte=price_from)

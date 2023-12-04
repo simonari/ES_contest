@@ -12,7 +12,7 @@ from .models import Room
 from .serializers import RoomSerializer, UserSerializer
 
 
-class GetRoomInfoView(generics.ListAPIView):
+class RoomListView(generics.ListAPIView):
     serializer_class = RoomSerializer
     permission_classes = [AllowAny]
 
@@ -55,7 +55,7 @@ class GetRoomInfoView(generics.ListAPIView):
         return Room.objects.filter(query)
 
 
-class BookRoomView(viewsets.ModelViewSet):
+class RoomDetailView(viewsets.ModelViewSet):
     serializer_class = RoomSerializer
     authentication_classes = [TokenAuthentication]
 
@@ -99,7 +99,7 @@ class BookRoomView(viewsets.ModelViewSet):
         return Response("Booking successfully reverted!", status=status.HTTP_200_OK)
 
 
-class BookedRoomListView(generics.ListAPIView):
+class RoomBookedListView(generics.ListAPIView):
     serializer_class = RoomSerializer
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]

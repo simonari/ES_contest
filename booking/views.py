@@ -1,12 +1,10 @@
-from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db.models import Q, QuerySet
 
-from rest_framework import generics, status
+from rest_framework import generics, viewsets, status
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.request import Request
-from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from rest_framework.authentication import TokenAuthentication
 
@@ -57,29 +55,29 @@ class GetRoomInfoView(generics.ListAPIView):
         return Room.objects.filter(query)
 
 
-class BookRoomView(generics.RetrieveUpdateAPIView):
+class BookRoomView(viewsets.ModelViewSet):
     serializer_class = RoomSerializer
     authentication_classes = [TokenAuthentication, ]
 
     def get_permissions(self) -> list[BasePermission]:
-        """Method to assign permissions to methods
-        GET allowed to everyone
-        PUT allowed only to authenticated users
+        """Method to assign permissions to actions.\n
+        - **retrieve** allowed to everyone\n
+        - **partial_update** allowed only to authenticated users
         """
-        permission_classes = [AllowAny(), ]
+        permission_classes = [AllowAny]
 
-        if self.request.method == "PUT":
-            permission_classes = [IsAuthenticated(), ]
+        if self.action == "partial_update":
+            permission_classes = [IsAuthenticated]
 
-        return permission_classes
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self) -> Room:
-        return Room.objects.get(pk=self.kwargs['pk'])
+        return Room.objects.get(pk=self.kwargs["pk"])
 
     def get_object(self) -> Room:
         return self.get_queryset()
 
-    def update(self, request: Request, *args, **kwargs):
+    def partial_update(self, request: Request, *args, **kwargs) -> Response:
         room: Room = self.get_object()
 
         # If room not booked - book it by user
@@ -90,7 +88,7 @@ class BookRoomView(generics.RetrieveUpdateAPIView):
             return Response("Room successfully booked", status=status.HTTP_200_OK)
 
         # If room is booked, we check that requesting user and user that has booked a room match
-        # If it's not - server denies request for cancel booking
+        # If it's not - server denies request
         if room.booked_by != request.user:
             return Response("You can't revert booking of this room", status=status.HTTP_401_UNAUTHORIZED)
 
@@ -122,4 +120,3 @@ class UserDetailView(generics.RetrieveAPIView):
 
     def get_object(self) -> User:
         return self.get_queryset()
-

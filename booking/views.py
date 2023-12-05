@@ -1,5 +1,4 @@
-from typing import Type
-
+"""Views file"""
 from django.contrib.auth.models import User
 from django.db.models import Q, QuerySet
 from django.http import QueryDict
@@ -10,7 +9,8 @@ from rest_framework.request import Request
 from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from rest_framework.authentication import TokenAuthentication
 
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
+from drf_spectacular.utils import (extend_schema, extend_schema_view,
+                                   OpenApiParameter, OpenApiExample)
 
 from .models import Room
 from .serializers import RoomSerializer
@@ -74,12 +74,13 @@ from .serializers import RoomSerializer
     )
 )
 class RoomListView(generics.ListAPIView):
+    """View to get list of rooms"""
     serializer_class = RoomSerializer
     permission_classes = [AllowAny]
 
     def _make_query(self) -> Q:
         """Method to parse query params and make a DB-query"""
-        params: Type[QueryDict] = self.request.query_params
+        params: QueryDict = self.request.query_params
 
         price_from: str = params.get(key='price_from')
         price_to: str = params.get(key='price_to')

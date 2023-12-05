@@ -1,10 +1,9 @@
-from django.contrib.auth.models import User
-from django.contrib.auth.password_validation import validate_password
+"""DRF serializers"""
 from rest_framework import serializers
-from rest_framework.validators import UniqueValidator
 
 
 class RoomSerializer(serializers.Serializer):
+    """Serializer to `models.Room` model"""
     id = serializers.IntegerField(read_only=True)
     number = serializers.IntegerField()
     name = serializers.CharField(max_length=128)

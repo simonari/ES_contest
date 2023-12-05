@@ -1,3 +1,4 @@
+"""Endpoints list"""
 from django.urls import path, include, re_path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 

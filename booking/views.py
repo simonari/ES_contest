@@ -188,27 +188,36 @@ class RoomDetailView(viewsets.ModelViewSet):
         """Method to get room instance """
         return self.get_queryset()
 
+    @staticmethod
+    def _book(room: Room, user: User) -> None:
+        room.booked = True
+        room.booked_by = user
+        room.save()
+
+    @staticmethod
+    def _revert(room: Room) -> None:
+        room.booked = False
+        room.booked_by = None
+        room.save()
+
     def partial_update(self, request: Request, *args, **kwargs) -> Response:
         """Method that handling **PATCH** HTTP method.\n
         Responsible for booking room by user or reverting booking."""
         room: Room = self.get_object()
+        user: User = request.user
 
         # If room not booked - book it by user
         if not room.booked:
-            room.booked = True
-            room.booked_by = request.user
-            room.save()
+            self._book(room, user)
             return Response("Room successfully booked", status=status.HTTP_200_OK)
 
         # If room is booked, we check that requesting user and user that has booked a room match
         # If it's not - server denies request
-        if room.booked_by != request.user:
+        if room.booked_by != user:
             return Response("You can't revert booking of this room", status=status.HTTP_401_UNAUTHORIZED)
 
         # Otherwise - booking will be reverted
-        room.booked = False
-        room.booked_by = None
-        room.save()
+        self._revert(room)
         return Response("Booking successfully reverted!", status=status.HTTP_200_OK)
 
 
